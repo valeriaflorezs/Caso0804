@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caso 0804 — División de Datos | Singularity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0C1230;
+  --panel:#141B3E;
+  --panel-2:#1A2249;
+  --line:#2C3768;
+  --amber:#D600D6;
+  --amber-dim:#7A0080;
+  --cyan:#8FF5EC;
+  --violet:#8B7FF5;
+  --text:#EDEEF2;
+  --text-mid:#A6ADD1;
+  --stamp:#C0392B;
+  --green-ok:#4CAF7D;
+  --font-display:'Oswald',sans-serif;
+  --font-body:'Roboto',sans-serif;
+  --font-mono:'Roboto Mono',monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--font-body);}
+body{min-height:100vh;}
+::selection{background:var(--amber);color:#fff;}
+
+/* Scrollbar minimal */
+::-webkit-scrollbar{width:8px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+.screen{display:none;min-height:100vh;width:100%;}
+.screen.active{display:block;}
+
+/* ===== TOP BAR (persistent) ===== */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 24px;
+  background:rgba(11,14,20,0.92);
+  backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);
+}
+.topbar .brand{
+  font-family:var(--font-display); font-weight:600; letter-spacing:0.08em;
+  font-size:0.95rem; color:var(--text); text-transform:uppercase;
+  display:flex; align-items:center; gap:10px;
+}
+.brand .dot{width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);}
+.topbar .case-id{
+  font-family:var(--font-mono); font-size:0.75rem; color:var(--text-mid);
+}
+.progress-track{
+  height:3px; background:var(--line); width:100%;
+}
+.progress-fill{
+  height:100%; background:linear-gradient(90deg,var(--amber),var(--cyan));
+  width:0%; transition:width 0.5s ease;
+}
+
+/* ===== FOLDER / COVER SCREEN ===== */
+.cover-wrap{
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  padding:32px 16px; position:relative; overflow:hidden;
+}
+.cover-wrap::before{
+  content:''; position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(214,0,214,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(214,0,214,0.05) 1px, transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+}
+.folder{
+  width:100%; max-width:560px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-top:6px solid var(--amber);
+  border-radius:4px;
+  padding:40px 36px 36px;
+  position:relative;
+  box-shadow:0 30px 60px rgba(0,0,0,0.5);
+}
+.folder::after{
+  content:'CONFIDENCIAL';
+  position:absolute; top:28px; right:-38px;
+  background:var(--stamp); color:#fff;
+  font-family:var(--font-display); font-weight:700; font-size:0.7rem;
+  letter-spacing:0.15em; padding:5px 46px;
+  transform:rotate(28deg);
+  box-shadow:0 2px 8px rgba(0,0,0,0.4);
+  opacity:0.9;
+}
+.tab-label{
+  font-family:var(--font-mono); font-size:0.7rem; color:var(--amber);
+  letter-spacing:0.15em; text-transform:uppercase; margin-bottom:18px;
+  display:block;
+}
+.folder h1{
+  font-family:var(--font-display); font-weight:700; font-size:2.1rem;
+  line-height:1.1; margin:0 0 6px; color:#fff; text-transform:uppercase;
+}
+.folder .subtitle{
+  font-family:var(--font-mono); color:var(--cyan); font-size:0.85rem; margin-bottom:24px;
+}
+.case-meta{
+  display:grid; grid-template-columns:1fr 1fr; gap:12px 20px;
+  border-top:1px dashed var(--line); border-bottom:1px dashed var(--line);
+  padding:18px 0; margin-bottom:22px;
+}
+.case-meta div .k{font-family:var(--font-mono); font-size:0.65rem; color:var(--text-mid); text-transform:uppercase; letter-spacing:0.1em;}
+.case-meta div .v{font-family:var(--font-body); font-size:0.9rem; color:var(--text); font-weight:500;}
+.folder p.brief{
+  font-size:0.95rem; line-height:1.6; color:var(--text-mid); margin-bottom:28px;
+}
+.folder p.brief strong{color:var(--text);}
+.btn{
+  font-family:var(--font-display); font-weight:600; letter-spacing:0.05em;
+  text-transform:uppercase; font-size:0.95rem;
+  background:var(--amber); color:#fff; border:none;
+  padding:14px 28px; border-radius:3px; cursor:pointer;
+  width:100%; transition:transform 0.15s ease, background 0.15s ease;
+}
+.btn:hover{background:#f01af0; transform:translateY(-1px);}
+.btn:active{transform:translateY(0);}
+.btn-secondary{
+  background:transparent; border:1px solid var(--line); color:var(--text);
+}
+.btn-secondary:hover{background:var(--panel-2); border-color:var(--amber);}
+.btn-ghost{
+  background:transparent; border:1px solid var(--cyan); color:var(--cyan);
+}
+.btn-ghost:hover{background:rgba(143,245,236,0.08);}
+
+/* ===== SUSPECTS DOSSIER ===== */
+.container{max-width:960px; margin:0 auto; padding:36px 20px 80px;}
+.section-head{margin-bottom:28px;}
+.eyebrow{
+  font-family:var(--font-mono); font-size:0.72rem; color:var(--amber);
+  letter-spacing:0.15em; text-transform:uppercase; display:block; margin-bottom:8px;
+}
+.section-head h2{
+  font-family:var(--font-display); font-size:1.9rem; color:#fff; margin:0 0 10px;
+  text-transform:uppercase; font-weight:600;
+}
+.section-head p{color:var(--text-mid); max-width:640px; line-height:1.6; margin:0;}
+
+.suspects-grid{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:16px; margin-top:28px;
+}
+.suspect-card{
+  background:var(--panel); border:1px solid var(--line); border-radius:6px;
+  padding:20px; position:relative;
+}
+.suspect-card .badge-no{
+  font-family:var(--font-mono); font-size:0.7rem; color:var(--amber-dim);
+  position:absolute; top:16px; right:16px;
+}
+.suspect-card h3{
+  font-family:var(--font-display); font-size:1.2rem; color:#fff; margin:0 0 4px; text-transform:uppercase;
+}
+.suspect-card .role{
+  font-family:var(--font-mono); font-size:0.72rem; color:var(--cyan); margin-bottom:12px; display:block;
+}
+.suspect-card ul{margin:0; padding-left:18px; font-size:0.85rem; color:var(--text-mid); line-height:1.6;}
+
+/* ===== LEVEL SCREENS ===== */
+.level-header{
+  display:flex; align-items:center; gap:14px; margin-bottom:8px; flex-wrap:wrap;
+}
+.level-chip{
+  font-family:var(--font-mono); font-size:0.75rem; padding:4px 12px; border-radius:20px;
+  border:1px solid var(--line); color:var(--text-mid);
+}
+.level-chip.active{border-color:var(--amber); color:var(--amber);}
+.difficulty-tag{
+  font-family:var(--font-display); font-weight:600; font-size:0.7rem; letter-spacing:0.08em;
+  padding:4px 10px; border-radius:3px; text-transform:uppercase;
+}
+.difficulty-tag.novato{background:rgba(76,175,125,0.15); color:var(--green-ok); border:1px solid rgba(76,175,125,0.4);}
+.difficulty-tag.campo{background:rgba(214,0,214,0.15); color:var(--amber); border:1px solid rgba(214,0,214,0.4);}
+.difficulty-tag.especial{background:rgba(143,245,236,0.15); color:var(--cyan); border:1px solid rgba(143,245,236,0.4);}
+
+.panel-block{
+  background:var(--panel); border:1px solid var(--line); border-radius:8px;
+  padding:24px; margin-bottom:20px;
+}
+.panel-block h4{
+  font-family:var(--font-display); font-size:1.05rem; color:#fff; text-transform:uppercase;
+  margin:0 0 14px; display:flex; align-items:center; gap:8px;
+}
+.panel-block h4::before{content:''; width:4px; height:16px; background:var(--amber); display:inline-block; border-radius:2px;}
+
+/* Chart bars (pure CSS, no libs needed) */
+.bar-chart{display:flex; align-items:flex-end; gap:14px; height:180px; padding:10px 0 0; border-bottom:1px solid var(--line);}
+.bar-item{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
+.bar{
+  width:100%; max-width:56px; background:linear-gradient(180deg,var(--cyan),var(--violet));
+  border-radius:4px 4px 0 0; position:relative; transition:height 1s ease;
+}
+.bar .val{
+  position:absolute; top:-24px; left:50%; transform:translateX(-50%);
+  font-family:var(--font-mono); font-size:0.75rem; color:var(--text);
+}
+.bar-label{font-family:var(--font-mono); font-size:0.72rem; color:var(--text-mid); margin-top:8px; text-align:center;}
+
+/* line chart svg wrapper just uses inline svg, styled via currentColor */
+
+table.data-table{width:100%; border-collapse:collapse; font-size:0.85rem;}
+table.data-table th{
+  font-family:var(--font-mono); text-transform:uppercase; font-size:0.68rem; letter-spacing:0.05em;
+  color:var(--text-mid); text-align:left; padding:10px 12px; border-bottom:1px solid var(--line);
+}
+table.data-table td{
+  padding:10px 12px; border-bottom:1px solid var(--line); font-family:var(--font-mono); color:var(--text);
+}
+table.data-table tr:hover td{background:rgba(214,0,214,0.06);}
+.mismatch{color:var(--stamp); font-weight:700;}
+.match{color:var(--green-ok);}
+
+.mcq{display:flex; flex-direction:column; gap:10px; margin-top:16px;}
+.mcq-option{
+  background:var(--panel-2); border:1px solid var(--line); border-radius:6px;
+  padding:14px 16px; cursor:pointer; font-size:0.9rem; color:var(--text);
+  transition:border-color 0.15s ease, background 0.15s ease;
+  display:flex; align-items:center; gap:12px;
+}
+.mcq-option:hover{border-color:var(--amber);}
+.mcq-option .letter{
+  font-family:var(--font-mono); font-weight:700; color:var(--amber); min-width:20px;
+}
+.mcq-option.correct{border-color:var(--green-ok); background:rgba(76,175,125,0.08);}
+.mcq-option.incorrect{border-color:var(--stamp); background:rgba(192,57,43,0.08);}
+.feedback{
+  margin-top:14px; padding:14px 16px; border-radius:6px; font-size:0.88rem; line-height:1.5; display:none;
+}
+.feedback.show{display:block;}
+.feedback.ok{background:rgba(76,175,125,0.1); border:1px solid rgba(76,175,125,0.4); color:var(--text);}
+.feedback.no{background:rgba(192,57,43,0.1); border:1px solid rgba(192,57,43,0.4); color:var(--text);}
+.feedback-actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;}
+.feedback-actions button{
+  font-family:var(--font-display); font-weight:600; letter-spacing:0.03em;
+  text-transform:uppercase; font-size:0.78rem; padding:10px 16px;
+  border-radius:4px; cursor:pointer; width:auto;
+}
+.feedback-actions .btn-secondary{background:var(--panel-2); border:1px solid var(--line); color:var(--text);}
+.feedback-actions .btn-secondary:hover{border-color:var(--amber); color:var(--amber);}
+.feedback-actions .btn-ghost{background:transparent; border:1px solid var(--cyan); color:var(--cyan);}
+.feedback-actions .btn-ghost:hover{background:rgba(143,245,236,0.08);}
+
+.clue-reveal{
+  margin-top:22px; text-align:center; padding:22px; border:2px dashed var(--amber);
+  border-radius:8px; background:rgba(214,0,214,0.06); display:none;
+}
+.clue-reveal.show{display:block;}
+.clue-reveal .label{font-family:var(--font-mono); font-size:0.72rem; color:var(--text-mid); text-transform:uppercase; letter-spacing:0.1em;}
+.clue-reveal .fragment{
+  font-family:var(--font-mono); font-size:2.2rem; font-weight:700; color:var(--amber); letter-spacing:0.2em; margin:8px 0;
+}
+
+.nav-row{display:flex; justify-content:space-between; gap:12px; margin-top:28px; flex-wrap:wrap;}
+.nav-row .btn{width:auto; flex:0 0 auto; padding:12px 24px; font-size:0.85rem;}
+
+/* Chatbot (level 3) */
+.chat-window{
+  background:#0d1017; border:1px solid var(--line); border-radius:8px;
+  height:340px; overflow-y:auto; padding:16px; margin-bottom:14px;
+  display:flex; flex-direction:column; gap:10px;
+}
+.chat-msg{max-width:85%; padding:10px 14px; border-radius:8px; font-size:0.85rem; line-height:1.5;}
+.chat-msg.bot{background:var(--panel-2); border:1px solid var(--line); align-self:flex-start; color:var(--text);}
+.chat-msg.bot .tag{display:block; font-family:var(--font-mono); font-size:0.65rem; color:var(--cyan); margin-bottom:4px; text-transform:uppercase;}
+.chat-msg.user{background:var(--amber-dim); align-self:flex-end; color:#fff;}
+.chat-input-row{display:flex; gap:10px;}
+.quick-q{
+  background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+  padding:10px 14px; border-radius:20px; font-size:0.78rem; cursor:pointer; text-align:left;
+  font-family:var(--font-body);
+}
+.quick-q:hover{border-color:var(--cyan); color:var(--cyan);}
+.quick-q-grid{display:flex; flex-direction:column; gap:8px; margin-bottom:14px;}
+.quick-q-grid.used .quick-q{opacity:0.35; pointer-events:none;}
+
+/* Scatter plot */
+.scatter-wrap{position:relative; background:#0d1017; border-radius:6px; padding:16px;}
+
+/* Final screen */
+.final-hero{text-align:center; padding:60px 20px;}
+.final-hero .icon-lock{font-size:3rem; margin-bottom:16px;}
+.code-input-row{
+  display:flex; gap:10px; justify-content:center; margin:28px auto; max-width:420px; flex-wrap:wrap;
+}
+.code-input-row input{
+  flex:1; min-width:200px; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+  font-family:var(--font-mono); font-size:1.1rem; text-align:center; letter-spacing:0.2em;
+  padding:14px; border-radius:6px; text-transform:uppercase;
+}
+.code-input-row input:focus{outline:none; border-color:var(--amber);}
+
+.pill-row{display:flex; gap:10px; justify-content:center; margin:20px 0; flex-wrap:wrap;}
+.pill{
+  font-family:var(--font-mono); background:var(--panel-2); border:1px solid var(--line);
+  padding:10px 18px; border-radius:20px; font-size:1.1rem; color:var(--text-mid);
+}
+.pill.filled{border-color:var(--amber); color:var(--amber);}
+
+footer.stand-footer{
+  text-align:center; padding:40px 20px 60px; border-top:1px solid var(--line); margin-top:40px;
+}
+footer.stand-footer p{color:var(--text-mid); font-size:0.85rem; max-width:480px; margin:0 auto;}
+
+.cta-row{
+  display:flex; gap:14px; justify-content:center; flex-wrap:wrap;
+  max-width:560px; margin:0 auto;
+}
+.cta-row .btn{
+  width:auto; flex:1 1 220px; max-width:280px;
+  text-decoration:none; display:inline-flex; align-items:center; justify-content:center;
+  text-align:center;
+}
+.cta-primary{color:#fff;}
+.cta-secondary{color:var(--text);}
+
+@media (max-width:640px){
+  .folder{padding:32px 22px 28px;}
+  .folder h1{font-size:1.6rem;}
+  .folder::after{right:-46px; top:24px;}
+  .container{padding:24px 16px 60px;}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="dot"></span> DIVISIÓN DE DATOS — SINGULARITY</div>
+  <div class="case-id">EXPEDIENTE #0804-U</div>
+</div>
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- ========== SCREEN 0: PORTADA / EXPEDIENTE ========== -->
+<div class="screen active" id="screen-cover">
+  <div class="cover-wrap">
+    <div class="folder">
+      <span class="tab-label">Feria de Liderazgo y Voluntariado · Uninorte</span>
+      <span class="tab-label" style="margin-bottom:2px;">Caso 0804-U</span>
+      <h1>El Algoritmo Desaparecido</h1>
+      <div class="subtitle">// La noche antes de la feria, alguien borró la base de datos de admisiones de Singularity.</div>
+
+      <div class="case-meta">
+        <div><span class="k">Estado</span><br><span class="v">Activo</span></div>
+        <div><span class="k">Sospechosos</span><br><span class="v">5</span></div>
+        <div><span class="k">Niveles de evidencia</span><br><span class="v">3</span></div>
+        <div><span class="k">Tiempo estimado</span><br><span class="v">8–12 min</span></div>
+      </div>
+
+      <p class="brief">
+        Reclutamos <strong>agentes especiales</strong> para reconstruir lo que pasó
+        usando gráficas, cruces de datos y un testigo con IA — el mismo método con
+        el que <strong>Singularity</strong> resuelve problemas reales para sus aliados.
+        Cada nivel de evidencia que resuelvas te entrega un
+        <strong>fragmento del código de acceso</strong>.
+        Advertencia: las primeras pistas nunca cuentan toda la historia.
+        Al final, un <strong>Agente de Singularity en el stand</strong> te da la clave
+        para combinar los fragmentos y cerrar el caso.
+      </p>
+
+      <button class="btn" onclick="goTo('screen-suspects')">ABRIR EXPEDIENTE →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SCREEN 1: SOSPECHOSOS ========== -->
+<div class="screen" id="screen-suspects">
+  <div class="container">
+    <div class="section-head">
+      <span class="eyebrow">Paso 1 · Conoce a los sospechosos</span>
+      <h2>Cinco personas tenían acceso al sistema esa noche</h2>
+      <p>Lee su ficha. La vas a necesitar para los tres niveles de evidencia que siguen.</p>
+    </div>
+
+    <div class="suspects-grid">
+      <div class="suspect-card">
+        <span class="badge-no">S-01</span>
+        <h3>Alejandro Cantillo</h3>
+        <span class="role">Tesorero · Junta Directiva</span>
+        <ul>
+          <li>Última conexión: 11:47 p.m.</li>
+          <li>Dice que estaba estudiando en la biblioteca</li>
+          <li>Tiene acceso de administrador</li>
+          <li>Se quedó hasta tarde esa semana ajustando el presupuesto de la feria</li>
+        </ul>
+      </div>
+      <div class="suspect-card">
+        <span class="badge-no">S-02</span>
+        <h3>Nicole Ramírez</h3>
+        <span class="role">Directora de Prensa</span>
+        <ul>
+          <li>Última conexión: 10:15 p.m.</li>
+          <li>Dice que estaba grabando un video</li>
+          <li>No tiene acceso de administrador</li>
+          <li>Un testigo la vio salir molesta de una reunión con la junta esa semana</li>
+        </ul>
+      </div>
+      <div class="suspect-card">
+        <span class="badge-no">S-03</span>
+        <h3>Camilo González</h3>
+        <span class="role">Director de Proyectos</span>
+        <ul>
+          <li>Última conexión: 11:52 p.m.</li>
+          <li>Dice que estaba dormido desde las 10 p.m.</li>
+          <li>Tiene acceso de administrador</li>
+          <li>Fue quien construyó el sistema de admisiones desde cero</li>
+        </ul>
+      </div>
+      <div class="suspect-card">
+        <span class="badge-no">S-04</span>
+        <h3>Valeria F. Sarmiento</h3>
+        <span class="role">Presidenta</span>
+        <ul>
+          <li>Última conexión: 9:40 p.m.</li>
+          <li>Dice que estaba en una cena familiar</li>
+          <li>No tiene acceso de administrador</li>
+          <li>Había discutido por chat con Camilo dos días antes</li>
+        </ul>
+      </div>
+      <div class="suspect-card">
+        <span class="badge-no">S-05</span>
+        <h3>Santiago Rincón</h3>
+        <span class="role">Director de Alianzas</span>
+        <ul>
+          <li>Última conexión: 11:55 p.m.</li>
+          <li>Dice que estaba en videollamada gestionando una alianza externa</li>
+          <li>No tiene acceso de administrador</li>
+          <li>Tuvo la mayor concentración de accesos justo esa noche</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="goTo('screen-cover')">← Volver</button>
+      <button class="btn" style="max-width:280px;" onclick="goTo('screen-level1')">COMENZAR NIVEL 1 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SCREEN 2: NIVEL 1 ========== -->
+<div class="screen" id="screen-level1">
+  <div class="container">
+    <div class="level-header">
+      <span class="level-chip active">Nivel 1 de 3</span>
+      <span class="difficulty-tag novato">🟢 Novato</span>
+    </div>
+    <div class="section-head">
+      <h2>La lectura de la escena</h2>
+      <p>El sistema registró cuántos accesos hizo cada sospechoso en los últimos 7 días. Ojo: el <strong>total de la semana</strong> por sí solo no basta — varios sospechosos tuvieron semanas ocupadas. Lo que de verdad importa es <strong>cuándo</strong> ocurrió esa actividad.</p>
+    </div>
+
+    <div class="panel-block">
+      <h4>Evidencia A-01 · Accesos al sistema (últimos 7 días)</h4>
+      <div class="bar-chart" id="barChart1">
+        <div class="bar-item"><div class="bar" data-h="60" style="height:0%;"><span class="val">9</span></div><span class="bar-label">Alejandro<br>S-01</span></div>
+        <div class="bar-item"><div class="bar" data-h="14" style="height:0%;"><span class="val">2</span></div><span class="bar-label">Nicole<br>S-02</span></div>
+        <div class="bar-item"><div class="bar" data-h="53" style="height:0%;"><span class="val">8</span></div><span class="bar-label">Cam.<br>S-03</span></div>
+        <div class="bar-item"><div class="bar" data-h="14" style="height:0%;"><span class="val">2</span></div><span class="bar-label">Valeria<br>S-04</span></div>
+        <div class="bar-item"><div class="bar" data-h="80" style="height:0%;"><span class="val">12</span></div><span class="bar-label">Santiago R.<br>S-05</span></div>
+      </div>
+      <p style="color:var(--text-mid); font-size:0.82rem; margin-top:14px;">Con estos totales, Alejandro, Santiago R. y Camilo tuvieron semanas parecidas. El total NO te dice quién es sospechoso todavía.</p>
+    </div>
+
+    <div class="panel-block">
+      <h4>Evidencia A-01b · Cuántos de esos accesos ocurrieron la noche del incidente (10 p.m. – 12 a.m.)</h4>
+      <table class="data-table">
+        <thead><tr><th>Sospechoso</th><th>Accesos totales (7 días)</th><th>Accesos la noche del incidente</th><th>% concentrado esa noche</th></tr></thead>
+        <tbody>
+          <tr><td>Alejandro Cantillo</td><td>9</td><td>1</td><td>11%</td></tr>
+          <tr><td>Nicole Ramírez</td><td>2</td><td>0</td><td>0%</td></tr>
+          <tr><td>Camilo González</td><td>8</td><td>2</td><td>25%</td></tr>
+          <tr><td>Valeria F. Sarmiento</td><td>2</td><td>0</td><td>0%</td></tr>
+          <tr><td>Santiago Rincón</td><td>12</td><td>9</td><td>75%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel-block">
+      <h4>Pregunta del agente</h4>
+      <p style="color:var(--text-mid); font-size:0.9rem; margin-bottom:4px;">
+        No basta con tener muchos accesos en la semana. ¿Quién concentró la mayoría de su actividad <strong>justo la noche del incidente</strong> — el verdadero patrón <em>outlier</em>?
+      </p>
+      <div class="mcq" id="mcq1">
+        <div class="mcq-option" data-correct="false" onclick="selectOption(this,'mcq1','feedback1',false)"><span class="letter">A</span> Alejandro Cantillo (S-01) — tuvo un total alto en la semana</div>
+        <div class="mcq-option" data-correct="false" onclick="selectOption(this,'mcq1','feedback1',false)"><span class="letter">B</span> Camilo González (S-03) — solo el 25% de sus accesos fue esa noche</div>
+        <div class="mcq-option" data-correct="true" onclick="selectOption(this,'mcq1','feedback1',true)"><span class="letter">C</span> Santiago Rincón (S-05)</div>
+      </div>
+      <div class="feedback" id="feedback1"></div>
+    </div>
+
+    <div class="clue-reveal" id="clueReveal1">
+      <span class="label">Fragmento de código recuperado</span>
+      <div class="fragment">S1 - "D"</div>
+      <p style="color:var(--text-mid); font-size:0.85rem;">Guarda esta letra. Pero un buen agente no cierra el caso con un solo nivel de evidencia — sigue al Nivel 2.</p>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="goTo('screen-suspects')">← Sospechosos</button>
+      <button class="btn" id="toLevel2" style="max-width:280px; opacity:0.4; pointer-events:none;" onclick="goTo('screen-level2')">NIVEL 2 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SCREEN 3: NIVEL 2 ========== -->
+<div class="screen" id="screen-level2">
+  <div class="container">
+    <div class="level-header">
+      <span class="level-chip active">Nivel 2 de 3</span>
+      <span class="difficulty-tag campo">🟡 Agente de Campo</span>
+    </div>
+    <div class="section-head">
+      <h2>Cruce de evidencia</h2>
+      <p>Santiago concentró su actividad esa noche — pero un patrón sospechoso no es una prueba. Ahora cruza la <strong>coartada</strong> de cada sospechoso (lo que dice que hacía) contra los <strong>logs reales</strong> del sistema. Cuidado: no toda diferencia de horario es una mentira.</p>
+    </div>
+
+    <div class="panel-block">
+      <h4>Evidencia A-02 · Coartadas vs. Logs del sistema (10:00 p.m. – 12:00 a.m.)</h4>
+      <table class="data-table">
+        <thead><tr><th>Sospechoso</th><th>Coartada declarada</th><th>Log del sistema</th><th>¿Coincide?</th></tr></thead>
+        <tbody>
+          <tr><td>Alejandro Cantillo</td><td>Biblioteca hasta 12 a.m.</td><td>Acceso wifi biblioteca 10–11:45 p.m. (la biblioteca cierra a las 11:45 p.m.)</td><td class="match">✔ Coincide</td></tr>
+          <tr><td>Nicole Ramírez</td><td>Grabando video hasta 11 p.m.</td><td>Publicación subida 10:58 p.m.</td><td class="match">✔ Coincide</td></tr>
+          <tr><td>Camilo González</td><td>"Dormido desde las 10 p.m."</td><td>Sesión activa en el panel admin 11:52 p.m.</td><td class="mismatch">✘ No coincide</td></tr>
+          <tr><td>Valeria F. Sarmiento</td><td>Cena familiar hasta 11:30 p.m.</td><td>Ubicación de check-in en red del restaurante</td><td class="match">✔ Coincide</td></tr>
+          <tr><td>Santiago Rincón</td><td>"En videollamada revisando alianzas con Barranquilla Cómo Vamos"</td><td>Registro de la videollamada, 10:30–11:55 p.m., con otros 3 participantes externos</td><td class="match">✔ Coincide</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--text-mid); font-size:0.82rem; margin-top:14px;">Nota: la biblioteca cierra a las 11:45 p.m., así que la salida de Alejandro antes de las 12 a.m. no es una inconsistencia — es el horario normal de cierre. Y la actividad de Santiago esa noche sí era real, solo que no tenía nada que ver con el sistema de admisiones.</p>
+    </div>
+
+    <div class="panel-block">
+      <h4>Pregunta del agente</h4>
+      <p style="color:var(--text-mid); font-size:0.9rem; margin-bottom:4px;">
+        Con la coartada confirmada de Santiago, la pista del Nivel 1 queda descartada. ¿Quién dice una cosa, pero los datos registran <strong>otra que no se explica por un simple margen de horario</strong>?
+      </p>
+      <div class="mcq" id="mcq2">
+        <div class="mcq-option" data-correct="false" onclick="selectOption(this,'mcq2','feedback2',false)"><span class="letter">A</span> Alejandro Cantillo — su salida no coincide exacto con la coartada</div>
+        <div class="mcq-option" data-correct="true" onclick="selectOption(this,'mcq2','feedback2',true)"><span class="letter">B</span> Camilo González</div>
+        <div class="mcq-option" data-correct="false" onclick="selectOption(this,'mcq2','feedback2',false)"><span class="letter">C</span> Santiago Rincón — su videollamada podría ser una tapadera</div>
+      </div>
+      <div class="feedback" id="feedback2"></div>
+    </div>
+
+    <div class="clue-reveal" id="clueReveal2">
+      <span class="label">Fragmento de código recuperado</span>
+      <div class="fragment">S1 - "A"</div>
+      <p style="color:var(--text-mid); font-size:0.85rem;">Camilo mintió sobre su coartada. Pero falta su motivo — eso está en el nivel 3.</p>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="goTo('screen-level1')">← Nivel 1</button>
+      <button class="btn" id="toLevel3" style="max-width:280px; opacity:0.4; pointer-events:none;" onclick="goTo('screen-level3')">NIVEL 3 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SCREEN 4: NIVEL 3 ========== -->
+<div class="screen" id="screen-level3">
+  <div class="container">
+    <div class="level-header">
+      <span class="level-chip active">Nivel 3 de 3</span>
+      <span class="difficulty-tag especial">🔴 Agente Especial IA</span>
+    </div>
+    <div class="section-head">
+      <h2>El testigo con IA</h2>
+      <p>Interroga a <strong>ARIA</strong>, el asistente de IA que monitorea el sistema. No te va a dar la respuesta directa — y esta vez, hay dos sospechosos con acceso admin esa noche, y algo más que no es lo que parece. Hazle <strong>las 6 preguntas</strong> antes de acusar a alguien.</p>
+    </div>
+
+    <div class="panel-block">
+      <h4>Terminal de interrogatorio — ARIA</h4>
+      <div class="chat-window" id="chatWindow">
+        <div class="chat-msg bot"><span class="tag">ARIA · IA de monitoreo</span>Agente, tengo registros de esa noche pero no puedo interpretarlos por ti. Pregúntame algo específico.</div>
+      </div>
+      <div class="quick-q-grid" id="quickQGrid">
+        <div class="quick-q" onclick="askAria(this,'motivo')">¿Camilo tenía algún motivo para borrar la base de datos?</div>
+        <div class="quick-q" onclick="askAria(this,'patron')">Muéstrame el patrón de uso de CPU del servidor esa noche</div>
+        <div class="quick-q" onclick="askAria(this,'otros')">¿Alguien más entró al panel de administrador esa noche?</div>
+        <div class="quick-q" onclick="askAria(this,'dispositivo')">Si dos personas tenían sesión admin, ¿cómo sé cuál dispositivo hizo el borrado?</div>
+        <div class="quick-q" onclick="askAria(this,'exportacion')">¿Hubo alguna llamada o transferencia de archivos justo antes del borrado?</div>
+        <div class="quick-q" onclick="askAria(this,'isabella')">Esa exportación se envió a un correo externo. ¿De quién es esa cuenta?</div>
+      </div>
+    </div>
+
+    <div class="panel-block" id="scatterBlock" style="display:none;">
+      <h4>Evidencia A-03 · Uso de CPU del servidor (11:00 p.m. – 12:00 a.m.)</h4>
+      <div class="scatter-wrap">
+        <svg viewBox="0 0 600 240" style="width:100%; height:auto;">
+          <line x1="40" y1="200" x2="580" y2="200" stroke="#2C3768" stroke-width="1"/>
+          <line x1="40" y1="20" x2="40" y2="200" stroke="#2C3768" stroke-width="1"/>
+          <text x="300" y="228" fill="#A6ADD1" font-family="Roboto Mono" font-size="11" text-anchor="middle">Hora (11:00 p.m. → 12:00 a.m.)</text>
+          <text x="16" y="110" fill="#A6ADD1" font-family="Roboto Mono" font-size="11" text-anchor="middle" transform="rotate(-90,16,110)">% CPU</text>
+          <!-- normal points -->
+          <circle cx="80" cy="185" r="5" fill="#8FF5EC" opacity="0.8"/>
+          <circle cx="130" cy="180" r="5" fill="#8FF5EC" opacity="0.8"/>
+          <circle cx="180" cy="190" r="5" fill="#8FF5EC" opacity="0.8"/>
+          <circle cx="230" cy="178" r="5" fill="#8FF5EC" opacity="0.8"/>
+          <circle cx="280" cy="182" r="5" fill="#8FF5EC" opacity="0.8"/>
+          <circle cx="380" cy="188" r="5" fill="#8FF5EC" opacity="0.8"/>
+          <circle cx="430" cy="180" r="5" fill="#8FF5EC" opacity="0.8"/>
+          <circle cx="480" cy="184" r="5" fill="#8FF5EC" opacity="0.8"/>
+          <circle cx="530" cy="179" r="5" fill="#8FF5EC" opacity="0.8"/>
+          <!-- outlier -->
+          <circle cx="330" cy="35" r="8" fill="#D600D6" stroke="#fff" stroke-width="1.5"/>
+          <text x="330" y="22" fill="#D600D6" font-family="Roboto Mono" font-size="11" text-anchor="middle" font-weight="700">11:52 p.m.</text>
+        </svg>
+      </div>
+      <p style="color:var(--text-mid); font-size:0.85rem; margin-top:10px;">
+        Todo el servidor operaba entre 12–20% de uso de CPU (puntos normales) durante la hora, excepto un
+        punto que llegó a más del 90% a las <strong>11:52 p.m.</strong> — el mismo minuto en que Camilo
+        tenía sesión activa en el log del Nivel 2.
+      </p>
+    </div>
+
+    <div class="panel-block" id="finalQBlock" style="display:none;">
+      <h4>Pregunta final del agente</h4>
+      <p style="color:var(--text-mid); font-size:0.9rem; margin-bottom:4px;">
+        Dos personas tenían sesión de administrador esa noche. Con la coartada falsa, el pico de CPU al mismo minuto,
+        el dispositivo que ejecutó el comando y lo que ARIA reveló sobre el motivo: ¿quién ejecutó el borrado?
+      </p>
+      <div class="mcq" id="mcq3">
+        <div class="mcq-option" data-correct="false" onclick="selectOption(this,'mcq3','feedback3',false)"><span class="letter">A</span> Alejandro Cantillo — también tenía sesión admin abierta esa noche</div>
+        <div class="mcq-option" data-correct="true" onclick="selectOption(this,'mcq3','feedback3',true)"><span class="letter">B</span> Camilo González — el Director de Proyectos</div>
+        <div class="mcq-option" data-correct="false" onclick="selectOption(this,'mcq3','feedback3',false)"><span class="letter">C</span> Santiago Rincón — ya descartado, su videollamada tiene testigos</div>
+      </div>
+      <div class="feedback" id="feedback3"></div>
+    </div>
+
+    <div class="panel-block" id="mcq4Block" style="display:none; border-color:var(--stamp);">
+      <h4 style="color:var(--stamp);">Pregunta trampa — no cierres el caso todavía</h4>
+      <p style="color:var(--text-mid); font-size:0.9rem; margin-bottom:4px;">
+        Camilo apretó el botón. Pero hubo una llamada 47 minutos antes, una exportación de datos a un correo
+        externo, y un chat "de pelea" que quizás no era una pelea. Con esa evidencia: ¿el borrado fue idea de
+        Camilo, o alguien más lo empujó a hacerlo?
+      </p>
+      <div class="mcq" id="mcq4">
+        <div class="mcq-option" data-correct="false" onclick="selectOption(this,'mcq4','feedback4',false)"><span class="letter">A</span> Fue idea suya, actuó completamente solo</div>
+        <div class="mcq-option" data-correct="false" onclick="selectOption(this,'mcq4','feedback4',false)"><span class="letter">B</span> De Santiago Rincón, el Director de Alianzas</div>
+        <div class="mcq-option" data-correct="true" onclick="selectOption(this,'mcq4','feedback4',true)"><span class="letter">C</span> De Valeria F. Sarmiento, minutos antes por llamada</div>
+      </div>
+      <div class="feedback" id="feedback4"></div>
+    </div>
+
+    <div class="clue-reveal" id="clueReveal3">
+      <span class="label">Fragmento de código recuperado</span>
+      <div class="fragment">S1 - "T"</div>
+      <p style="color:var(--text-mid); font-size:0.85rem;">Ya tienes las 3 letras. Ve al agente del stand para el paso final — pero el expediente completo tiene una sorpresa.</p>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-secondary" onclick="goTo('screen-level2')">← Nivel 2</button>
+      <button class="btn" id="toFinal" style="max-width:280px; opacity:0.4; pointer-events:none;" onclick="goTo('screen-final')">CERRAR EL CASO →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== SCREEN 5: FINAL / CÓDIGO ========== -->
+<div class="screen" id="screen-final">
+  <div class="container">
+    <div class="final-hero">
+      <span class="eyebrow">Paso final</span>
+      <h2 style="font-family:var(--font-display); font-size:2rem; color:#fff; text-transform:uppercase;">Reconstruiste el caso</h2>
+      <p style="color:var(--text-mid); max-width:560px; margin:0 auto 20px;">
+        Tienes los 3 fragmentos de evidencia. Ahora búscanos en el stand:
+        un <strong>Agente de Singularity</strong> te va a dar la clave para
+        combinarlos en el código final de 3 caracteres.
+      </p>
+
+      <div class="pill-row">
+        <div class="pill filled">D</div>
+        <div class="pill filled">A</div>
+        <div class="pill filled">T</div>
+      </div>
+
+      <div class="panel-block" style="text-align:left; max-width:480px; margin:0 auto 24px;">
+        <h4>Ingresa el código que te dé el agente</h4>
+        <div class="code-input-row">
+          <input type="text" id="finalCodeInput" maxlength="6" placeholder="CÓDIGO">
+        </div>
+        <button class="btn" style="max-width:100%;" onclick="checkFinalCode()">VERIFICAR CÓDIGO</button>
+        <div class="feedback" id="finalFeedback"></div>
+      </div>
+
+      <div id="successBlock" style="display:none;">
+        <div style="font-size:2.5rem; margin-bottom:8px;">🔓</div>
+        <h3 style="font-family:var(--font-display); color:var(--green-ok); text-transform:uppercase;">Caso cerrado, Agente.</h3>
+
+        <div class="panel-block" style="text-align:left; max-width:560px; margin:24px auto; border-color:var(--stamp);">
+          <h4 style="color:var(--stamp);">Confesión registrada — Camilo González</h4>
+          <p style="color:var(--text); font-size:0.9rem; line-height:1.7; font-style:italic;">
+            "Yo construí ese sistema de admisiones desde cero. Cuando propuse rediseñarlo y la junta
+            lo rechazó sin siquiera revisarlo a fondo, sentí que borraban mi trabajo antes de que
+            alguien más lo hiciera. Valeria me llamó esa noche, sabía justo qué tan mal me tenía eso.
+            Me pidió que le exportara la base 'solo para respaldarla, por si acaso' — confié en ella.
+            Después de mandarle el archivo, algo se rompió en mí y terminé borrando la base completa.
+            Dije que estaba dormido porque no supe cómo explicar lo que había hecho. Lo mío no fue
+            premeditado, pero sí fue mi decisión, y asumo las consecuencias."
+          </p>
+        </div>
+
+        <div class="panel-block" style="text-align:left; max-width:560px; margin:0 auto 24px; border-color:var(--cyan);">
+          <h4 style="color:var(--cyan);">Nota final del expediente — Valeria F. Sarmiento</h4>
+          <p style="color:var(--text); font-size:0.9rem; line-height:1.7;">
+            La Asamblea ya está al tanto de la exportación no autorizada y de la llamada previa al borrado.
+            No fue ella quien presionó la tecla, pero sí quien puso en marcha lo que pasó esa noche —
+            incluso presidir la Junta no exime del debido proceso disciplinario. El caso oficialmente
+            involucra a dos personas, no a una — así que la próxima vez que una historia parezca
+            demasiado simple, agente, probablemente le falte un cruce de datos más.
+          </p>
+        </div>
+
+        <p style="color:var(--text-mid); max-width:520px; margin:0 auto 28px;">
+          Resolviste el Caso 0804-U cruzando exactamente lo que hacemos todas las semanas en
+          Singularity: leer datos, descartar pistas falsas, cruzar evidencia y trabajar con IA para
+          encontrar la verdad. Si esto te gustó, únete — esto no fue un caso ficticio, es una
+          probadita real de lo que hacemos.
+        </p>
+
+        <div class="cta-row">
+          <a class="btn cta-primary" href="https://forms.cloud.microsoft/r/9epi8FEKjg" target="_blank" rel="noopener">Inscríbete a Singularity →</a>
+          <a class="btn btn-secondary cta-secondary" href="https://linktr.ee/singularity_cd" target="_blank" rel="noopener">Otros enlaces de interés</a>
+        </div>
+      </div>
+    </div>
+
+    <footer class="stand-footer">
+      <p>🕵️ Caso 0804-U — Feria de Liderazgo y Voluntariado, Universidad del Norte · Singularity, ciencia de datos e IA</p>
+    </footer>
+  </div>
+</div>
+
+<script>
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+  updateProgress(id);
+  if(id==='screen-level1') animateBars();
+}
+
+const progressMap = {
+  'screen-cover':5, 'screen-suspects':15, 'screen-level1':40,
+  'screen-level2':65, 'screen-level3':85, 'screen-final':100
+};
+function updateProgress(id){
+  document.getElementById('progressFill').style.width = (progressMap[id]||0) + '%';
+}
+
+function animateBars(){
+  document.querySelectorAll('#barChart1 .bar').forEach(b=>{
+    const h = b.getAttribute('data-h');
+    setTimeout(()=>{ b.style.height = h + '%'; }, 100);
+  });
+}
+
+function selectOption(el, groupId, feedbackId, isCorrect){
+  const group = document.getElementById(groupId);
+  const options = group.querySelectorAll('.mcq-option');
+  const fb = document.getElementById(feedbackId);
+  fb.classList.remove('ok','no');
+  fb.classList.add('show');
+
+  if(isCorrect){
+    options.forEach(o=>{
+      o.style.pointerEvents='none';
+      if(o.getAttribute('data-correct')==='true'){ o.classList.add('correct'); }
+    });
+    fb.classList.add('ok');
+  } else {
+    options.forEach(o=>{ o.style.pointerEvents='none'; });
+    el.classList.add('incorrect');
+    fb.classList.add('no');
+  }
+
+  let okText = '', noText = '';
+
+  if(groupId==='mcq1'){
+    okText = '<strong>Correcto — por ahora.</strong> Santiago concentró el 75% de sus accesos en la franja del incidente, mientras que Alejandro y Camilo repartieron su actividad en toda la semana. Ese es un <em>outlier</em> real: no la cantidad total, sino el momento en que se concentra. Pero recuerda: un patrón sospechoso todavía no es una prueba — falta cruzarlo con más evidencia.';
+    noText = 'Revisa la segunda tabla, no solo la gráfica de totales. Compara la columna "% concentrado esa noche": ¿quién tiene casi toda su actividad justo esa noche, en vez de repartida en la semana?';
+    if(isCorrect){
+      document.getElementById('clueReveal1').classList.add('show');
+      document.getElementById('toLevel2').style.opacity='1';
+      document.getElementById('toLevel2').style.pointerEvents='auto';
+    }
+  }
+  if(groupId==='mcq2'){
+    okText = '<strong>Correcto — y el caso acaba de virar.</strong> La videollamada de Santiago tiene tres testigos externos y coincide al minuto: quedó descartado. Camilo, en cambio, dijo que estaba dormido, pero el log muestra su sesión activa en el panel de administrador a las 11:52 p.m. — una diferencia total, no un margen de minutos. Alejandro también es un distractor: su horario varía un poco, pero se explica por el cierre de la biblioteca. En análisis de datos hay que distinguir <em>ruido normal</em> de una <em>inconsistencia real</em> — y saber descartar una pista cuando la evidencia ya no la sostiene.';
+    noText = 'Cuidado con las diferencias pequeñas de horario, esas suelen tener explicación (como el cierre de la biblioteca o una videollamada con testigos). Busca la fila donde la coartada y el log cuentan historias completamente distintas.';
+    if(isCorrect){
+      document.getElementById('clueReveal2').classList.add('show');
+      document.getElementById('toLevel3').style.opacity='1';
+      document.getElementById('toLevel3').style.pointerEvents='auto';
+    }
+  }
+  if(groupId==='mcq3'){
+    okText = '<strong>Correcto, pero espera.</strong> Sí, Alejandro también tenía sesión admin — pero su dispositivo estaba en la red de la biblioteca, su horario cuadra, y no tenía motivo. La sesión de Camilo, desde su portátil personal, ejecutó el comando exacto al minuto del pico de CPU. Confirmado: fue su mano en el teclado. Pero antes de cerrar el caso, falta una pregunta.';
+    noText = 'Ten cuidado con acusar solo por tener acceso admin: eso también aplica a Alejandro, y él tiene coartada, horario y dispositivo consistentes. Busca a quien coincide en las cuatro evidencias a la vez: motivo, coartada falsa, pico de CPU y dispositivo.';
+    if(isCorrect){
+      document.getElementById('mcq4Block').style.display='block';
+    }
+  }
+  if(groupId==='mcq4'){
+    okText = '<strong>Caso resuelto — de verdad.</strong> Camilo apretó el botón, pero fue Valeria quien lo llamó 47 minutos antes, le pidió exportar los datos, y él terminó borrando el original para cubrir el rastro. El chat "de pelea" era ella pidiéndole el favor. Dos personas, dos responsabilidades distintas: quien actuó y quien lo empujó a actuar. Eso es lo que se descubre cuando cruzas TODA la evidencia, no solo la más obvia.';
+    noText = 'No te quedes con la respuesta fácil. Revisa de nuevo la pregunta sobre la llamada y la exportación de datos: ¿a quién le convenía tener esa base de datos completa esa misma semana?';
+    if(isCorrect){
+      document.getElementById('clueReveal3').classList.add('show');
+      document.getElementById('toFinal').style.opacity='1';
+      document.getElementById('toFinal').style.pointerEvents='auto';
+    }
+  }
+
+  if(isCorrect){
+    fb.innerHTML = okText;
+  } else {
+    fb.innerHTML = '<strong>No analizaste bien los datos todavía.</strong> ' + noText +
+      '<div class="feedback-actions">' +
+        '<button class="btn btn-secondary" onclick="retryQuestion(\''+groupId+'\',\''+feedbackId+'\')">🔄 Seguir jugando</button>' +
+        '<button class="btn-ghost" onclick="goTo(\'screen-cover\')">⬅ Volver al inicio</button>' +
+      '</div>';
+  }
+}
+
+function retryQuestion(groupId, feedbackId){
+  const group = document.getElementById(groupId);
+  const options = group.querySelectorAll('.mcq-option');
+  options.forEach(o=>{
+    o.style.pointerEvents='auto';
+    o.classList.remove('incorrect');
+    o.classList.remove('correct');
+  });
+  const fb = document.getElementById(feedbackId);
+  fb.classList.remove('show','ok','no');
+  fb.innerHTML='';
+}
+
+const ariaResponses = {
+  motivo: {
+    tag:'ARIA · IA de monitoreo',
+    text:'Revisando el historial de tickets internos... Camilo presentó una queja hace 3 semanas: su propuesta de rediseñar el sistema de inscripciones fue rechazada por la junta directiva. Registro un patrón de acceso a los archivos de esa propuesta la misma noche del incidente.'
+  },
+  patron: {
+    tag:'ARIA · IA de monitoreo',
+    text:'Generando gráfica de dispersión del uso de CPU del servidor entre 11:00 p.m. y 12:00 a.m... listo, la puedes ver abajo. Busca el punto que no sigue el patrón del resto.'
+  },
+  otros: {
+    tag:'ARIA · IA de monitoreo',
+    text:'Registro algo que debes saber: esa noche hubo DOS sesiones de administrador abiertas al mismo tiempo, entre las 11:40 p.m. y las 12:00 a.m. Una es de Alejandro Cantillo, la otra de Camilo González. El log por sí solo no me dice cuál de las dos hizo el borrado — necesitas cruzar otra evidencia para distinguirlas.'
+  },
+  dispositivo: {
+    tag:'ARIA · IA de monitoreo',
+    text:'Cada sesión queda asociada a la dirección MAC del dispositivo que se conectó. La sesión de Alejandro corresponde a un portátil registrado en la red de la biblioteca (consistente con su coartada). La sesión que ejecutó el comando de borrado, a las 11:52 p.m., corresponde al portátil personal de Camilo González, conectado desde su casa. Esa es la sesión que no tiene coartada que la respalde.'
+  },
+  exportacion: {
+    tag:'ARIA · IA de monitoreo',
+    text:'Antes del borrado pasó algo que no habías preguntado: a las 11:05 p.m. hay una llamada entrante de 2 minutos al celular de Camilo. A las 11:10 p.m., desde su misma sesión admin, se generó una exportación completa de la base de datos de admisiones y se envió por correo a una cuenta externa. El borrado ocurrió 42 minutos después, a las 11:52 p.m. Camilo apretó el botón — pero no fue idea suya empezar por ahí.'
+  },
+  isabella: {
+    tag:'ARIA · IA de monitoreo',
+    text:'La cuenta de destino del correo coincide con el correo personal de Valeria F. Sarmiento. Cruzando fechas: la Asamblea General le pidió esa misma semana presentar la base de datos completa antes de aprobar una alianza externa que ella venía gestionando. Los datos exportados son exactamente los que necesitaría para cerrar esa alianza por su cuenta, sin esperar la aprobación formal. Y el chat que tuvo con Camilo dos días antes no fue una pelea — fue ella pidiéndole el favor.'
+  }
+};
+let askedCount = 0;
+function askAria(el, key){
+  el.style.pointerEvents='none';
+  el.style.opacity='0.35';
+  const chatWindow = document.getElementById('chatWindow');
+
+  const userMsg = document.createElement('div');
+  userMsg.className='chat-msg user';
+  userMsg.textContent = el.textContent;
+  chatWindow.appendChild(userMsg);
+
+  setTimeout(()=>{
+    const r = ariaResponses[key];
+    const botMsg = document.createElement('div');
+    botMsg.className='chat-msg bot';
+    botMsg.innerHTML = '<span class="tag">'+r.tag+'</span>'+r.text;
+    chatWindow.appendChild(botMsg);
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+
+    if(key==='patron'){
+      document.getElementById('scatterBlock').style.display='block';
+    }
+    askedCount++;
+    if(askedCount>=6){
+      document.getElementById('finalQBlock').style.display='block';
+    }
+  }, 500);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function checkFinalCode(){
+  const input = document.getElementById('finalCodeInput');
+  const val = input.value.trim().toUpperCase();
+  const fb = document.getElementById('finalFeedback');
+  fb.classList.add('show');
+  // El código lo asigna el agente del stand en persona (ver material físico).
+  // Placeholder de verificación flexible: acepta la palabra clave que el agente comunique.
+  if(val === 'DATOS' || val === 'DAT'){
+    fb.classList.remove('no'); fb.classList.add('ok');
+    fb.innerHTML = '¡Código correcto!';
+    document.getElementById('successBlock').style.display='block';
+  } else {
+    fb.classList.remove('ok'); fb.classList.add('no');
+    fb.innerHTML = 'Ese código no abre el expediente. Pregúntale al Agente de Singularity en el stand.';
+  }
+}
+</script>
+</body>
+</html>
